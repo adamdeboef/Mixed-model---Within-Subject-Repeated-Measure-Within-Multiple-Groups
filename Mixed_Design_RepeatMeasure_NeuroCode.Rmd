@@ -1,6 +1,6 @@
 ---
 title: "Inhibition Analysis Across Pull and Stim Conditions"
-author: "Adam"
+author: "Adam De Boef"
 output:
   html_document:
     toc: true
@@ -44,7 +44,7 @@ library(kableExtra)
 
 **2.Data Import and Structure**
 ```{r}
-df_raw <- read_excel("/Users/adamdeboef/Desktop/R_Data/Stim vs Pull Adjusted Organized.xlsx")
+df_raw <- read_excel("Stim vs Pull Adjusted Organized.xlsx")
 ```
 
 The data set contains:
@@ -155,7 +155,7 @@ Coding commentary:
 Subject‑connected lines emphasize within‑subject changes allowing for faster audience digestion. Faceting by lesion type isolates group‑specific patterns allowing people to notice whole study results quickly. Using averages while appropriate simplifies the data sets, looking at data within single subjects may be more ideal in some cases.
 
 
-**8. Ridge‑Line Plots (Trial‑Level Distributions)**
+**8. Ridge‑Line Plot Set (Trial‑Level Distributions)**
 ```{r}
 order_table <- df_ridge <- df_long %>%
   mutate(
