@@ -1,0 +1,220 @@
+/* ================================
+   MODERN LIGHT VIGNETTE THEME
+   ================================ */
+
+/* Color system */
+:root {
+  --bg: #f5f7fb;
+  --bg-card: #ffffff;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --accent: #2563eb;
+  --accent-soft: #dbeafe;
+  --border-subtle: #e5e7eb;
+  --code-bg: #f5f5f5;
+  --code-inline-bg: #e5e7eb;
+  --code-text: #111827;
+}
+
+/* Base layout */
+body {
+  background: radial-gradient(circle at top left, #e0ecff 0, #f5f7fb 40%, #f5f7fb 100%);
+  color: var(--text-main);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+               "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Center content with a max width */
+body > div,
+.main-container {
+  max-width: 900px;
+  margin: 2.5rem auto;
+  padding: 2rem 2.5rem;
+  background: var(--bg-card);
+  border-radius: 18px;
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(148, 163, 184, 0.18);
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-main);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Highlighted, bold headers */
+h1, h2, h3, h4 {
+  background-color: #fff7b3;   /* soft yellow highlight */
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-weight: 700;
+  margin-top: 25px;
+  margin-bottom: 15px;
+}
+
+h1 {
+  font-size: 2.1rem;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 1.6rem;
+  border-bottom: none;
+}
+
+h3 {
+  font-size: 1.3rem;
+}
+
+h4, h5, h6 {
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+/* Paragraphs & lists */
+p {
+  margin: 0.6rem 0 0.9rem;
+}
+
+ul, ol {
+  margin: 0.4rem 0 1rem 1.4rem;
+}
+
+li {
+  margin: 0.2rem 0;
+}
+
+/* Links */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.35);
+}
+
+a:hover {
+  border-bottom-color: rgba(37, 99, 235, 0.9);
+}
+
+/* Horizontal rule */
+hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: 2rem 0;
+}
+
+/* Blockquotes */
+blockquote {
+  border-left: 4px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 0.75rem 1rem;
+  margin: 1.2rem 0;
+  border-radius: 0 10px 10px 0;
+  color: var(--text-main);
+}
+
+/* Code blocks (outer container) */
+pre {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 0.9rem 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 1rem 0 1.4rem;
+  border: 0.4px solid #d4d4d4;      /* thin, subtle border */
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+}
+
+/* Code blocks (inner code) */
+pre code {
+  background: transparent;
+  color: var(--code-text);
+  padding: 0;
+  border-radius: 0;
+  display: block;
+}
+
+/* Inline code */
+code {
+  background-color: var(--code-inline-bg);
+  color: var(--text-main);
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.2rem 0;
+  font-size: 0.95rem;
+}
+
+th, td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+}
+
+th {
+  background: #eff3ff;
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+tbody tr:nth-child(even) {
+  background: #f9fafb;
+}
+
+/* Images */
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  margin: 1rem 0 1.4rem;
+}
+
+/* TOC (if present) */
+.tocify,
+#TOC {
+  background: #f9fafb;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+}
+
+#TOC a {
+  border-bottom: none;
+}
+
+/* Small details */
+em {
+  color: var(--text-muted);
+}
+
+strong {
+  font-weight: 600;
+}
+
+/* Print tweaks */
+@media print {
+  body > div,
+  .main-container {
+    box-shadow: none;
+    border-radius: 0;
+    margin: 0;
+    padding: 0;
+  }
+}
