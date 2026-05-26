@@ -1,0 +1,291 @@
+---
+title: "Inhibition Analysis Across Pull and Stim Conditions"
+author: "Adam"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+---
+
+```{r}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+
+**1.Introduction**
+This vignette analyzes repeated measure data across multiple groups. Data primarily focuses on looking at intermusclar inhibition between muscles in different spinal cord injury models. Inhibition is measured via multiple mechanical perturbation (Pull) or electrical stimulation of the muscle belly (Stim) per subject. Note* Data provided is real world data and includes limited sample size, thus non-parametric testing will be used* . 
+
+ The goals of this analysis are:
+
+  -1.Compute mean inhibition per subject for Pull and Stim
+
+  -2.Visualize subject‑level changes using subject‑connected boxplots
+
+  -3.Perform Wilcoxon Sign rank tests within each lesion type
+
+  -4.Visualize trial‑level distributions using ridge‑line plots, with Stim above Pull for each subject
+
+  -5.Provide commentary on the underlying coding logic
+
+```{r}
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggridges)
+library(ggpubr)
+library(kableExtra)
+```
+
+**2.Data Import and Structure**
+```{r}
+df_raw <- read_excel("/Users/adamdeboef/Desktop/R_Data/Stim vs Pull Adjusted Organized.xlsx")
+```
+
+The data set contains:
+
+  Metadata columns (Lesion, Date, Animal, LesionType, Combination, StimVsPull, Force) and Inhibition results in columns (H → end). First data wrangling move is to pivot from wide format to long for analysis simplicity.
+
+
+**3.Reshape Inhibition Trials into Long Format**
+
+```{r}
+meta_cols <- 1:7
+inhib_cols <- (max(meta_cols) + 1):ncol(df_raw)
+
+df_long <- df_raw %>%
+  pivot_longer(
+    cols = all_of(inhib_cols),
+    names_to = "Trial",
+    values_to = "Inhibition"
+  ) %>%
+  mutate(
+    Condition = case_when(
+      StimVsPull == 1 ~ "Pull",
+      StimVsPull == 2 ~ "Stim"
+    )
+  )
+```
+
+Coding commentary:  
+Here using pivot_longer each inhibition trial becomes one row, enabling grouping, summarizing, and plotting with ggplot2.
+
+
+**4. Compute Mean Inhibition Per Subject**
+```{r}
+df_means <- df_long %>%
+  group_by(Animal, LesionType, Condition) %>%
+  summarise(
+    MeanInhibition = mean(Inhibition, na.rm = TRUE),
+    .groups = "drop"
+  )
+```
+
+
+**5. Wilcoxon Sign Rank Test Within Each Lesion Type**
+```{r}
+
+df_wide <- df_means %>%
+  pivot_wider(
+    names_from = Condition,
+    values_from = MeanInhibition
+  )
+wilcox_results <- df_wide %>%
+  group_by(LesionType) %>%
+  summarise(
+    p_value = wilcox.test(Pull, Stim, paired = TRUE, exact = FALSE)$p.value
+  ) %>%
+  mutate(
+    signif = case_when(
+      p_value < 0.001 ~ "***",
+      p_value < 0.01  ~ "**",
+      p_value < 0.05  ~ "*",
+      TRUE            ~ "ns"
+    )
+  )
+
+```
+Coding commentary:  
+Wilcoxon Sign Rank test is appropriate because Pull and Stim are repeated measures from the same subjects, but data sets fluctuate in size and may be small.
+
+**6. Merge p‑Values Back Into Plotting Data**
+```{r}
+df_means <- df_means %>%
+  left_join(wilcox_results, by = "LesionType")
+
+```
+
+**7. Subject‑Connected Boxplots (Mean Inhibition)**
+```{r}
+ggplot(df_means, aes(x = Condition, y = MeanInhibition)) +
+  geom_boxplot(aes(fill = LesionType), alpha = 0.6, outlier.shape = NA) +
+  geom_line(aes(group = Animal, color = LesionType), alpha = 0.6, size = 0.9) +
+  geom_point(aes(color = LesionType), size = 2.5) +
+  facet_wrap(~ LesionType, scales = "free_y") +
+  geom_text(
+    data = df_means %>% distinct(LesionType, p_value, signif),
+    aes(
+      x = 1.5,
+      y = Inf,
+      label = paste0("Wilcoxon p = ", signif(round(p_value, 3), digits = 3),
+                     "\n", signif)
+    ),
+    vjust = 1.2,
+    size = 4,
+    color = "black"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_color_brewer(palette = "Dark2") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Mean Inhibition: Pull vs Stim",
+    subtitle = "Subject-connected means with Wilcoxon signed-rank significance",
+    x = NULL,
+    y = "Mean Inhibition"
+  )
+
+
+```
+Coding commentary:  
+Subject‑connected lines emphasize within‑subject changes allowing for faster audience digestion. Faceting by lesion type isolates group‑specific patterns allowing people to notice whole study results quickly. Using averages while appropriate simplifies the data sets, looking at data within single subjects may be more ideal in some cases.
+
+
+**8. Ridge‑Line Plots (Trial‑Level Distributions)**
+```{r}
+order_table <- df_ridge <- df_long %>%
+  mutate(
+    Condition = case_when(
+      Condition == "Pull" ~ "Pull",
+      Condition == "Stim" ~ "Stim"
+    )
+  ) %>%
+  distinct(Animal, Condition) %>%
+  mutate(
+    OrderNum = ifelse(Condition == "Stim", 1, 2)
+  ) %>%
+  arrange(Animal, OrderNum) %>%
+  mutate(
+    SubjectOrder = paste0(Animal, "_", Condition)
+  )
+
+df_ridge <- df_long %>%
+  mutate(
+    Condition = case_when(
+      Condition == "Pull" ~ "Pull",
+      Condition == "Stim" ~ "Stim"
+    )
+  ) %>%
+  left_join(order_table, by = c("Animal", "Condition")) %>%
+  mutate(
+    SubjectOrder = factor(SubjectOrder, levels = order_table$SubjectOrder)
+  )
+
+```
+^^Set up the data for ease of plotting^^
+
+**8.2 Ridge Plot Function**
+```{r}
+ridge_plot <- function(lesion_name) {
+  
+  df_subset <- df_ridge %>%
+    filter(LesionType == lesion_name)
+  
+  ggplot(df_subset, aes(
+    x = Inhibition,
+    y = SubjectOrder,
+    fill = Condition
+  )) +
+    geom_density_ridges(
+      alpha = 0.7,
+      scale = 1.2,
+      color = "white"
+    ) +
+    scale_fill_manual(values = c("Pull" = "#1f78b4", "Stim" = "#e31a1c")) +
+    theme_minimal(base_size = 14) +
+    labs(
+      title = paste("Inhibition Ridge Plot –", lesion_name),
+      subtitle = "Stim above Pull for each subject",
+      x = "Inhibition",
+      y = "Subject – Condition",
+      fill = "Condition"
+    )
+}
+
+```
+
+I created a plot function to minimize coding repetition for each graph^^
+
+**8.3 Generate the Four Ridge Plots**
+
+```{r}
+ridge_DQ      <- ridge_plot("DQ")
+ridge_VQ      <- ridge_plot("VQ")
+ridge_Control <- ridge_plot("Control")
+ridge_LHX     <- ridge_plot("LHX")
+
+ridge_DQ
+ridge_VQ
+ridge_Control
+ridge_LHX
+
+```
+
+Commentary:  
+Ridge‑line plots reveal the shape of inhibition distributions, not just their means, in situations where means may not be the best representation of the data ridgleines may better describe data; binomial distributions are a great example of this. 
+
+**Summary Table**
+```{r}
+
+summary_table <- df_wide %>%
+  group_by(LesionType) %>%
+  summarise(
+    N = n(),
+    Mean_Pull = mean(Pull, na.rm = TRUE),
+    SD_Pull   = sd(Pull, na.rm = TRUE),
+    Mean_Stim = mean(Stim, na.rm = TRUE),
+    SD_Stim   = sd(Stim, na.rm = TRUE),
+    Mean_Delta = mean(Stim - Pull, na.rm = TRUE),
+    SD_Delta   = sd(Stim - Pull, na.rm = TRUE),
+    p_value = wilcox.test(Pull, Stim, paired = TRUE, exact = FALSE)$p.value
+  ) %>%
+  mutate(
+    signif = case_when(
+      p_value < 0.001 ~ "***",
+      p_value < 0.01  ~ "**",
+      p_value < 0.05  ~ "*",
+      TRUE            ~ "ns"
+    ),
+    Mean_Pull = sprintf("%.2f ± %.2f", Mean_Pull, SD_Pull),
+    Mean_Stim = sprintf("%.2f ± %.2f", Mean_Stim, SD_Stim),
+    Mean_Delta = sprintf("%.2f ± %.2f", Mean_Delta, SD_Delta),
+    p_value = sprintf("%.4f", p_value)
+  ) %>%
+  select(
+    LesionType, N,
+    Mean_Pull, Mean_Stim, Mean_Delta,
+    p_value, signif
+  )
+
+summary_table %>%
+  kable(
+    caption = "Wilcoxon Signed-Rank Summary of Inhibition Changes (Stim − Pull)",
+    col.names = c(
+      "Lesion Type", "N",
+      "Pull (Mean ± SD)", "Stim (Mean ± SD)",
+      "Delta (Mean ± SD)",
+      "p-value", "Significance"
+    ),
+    align = "lcccccc"
+  ) %>%
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = c("striped", "hover", "condensed")
+  )
+
+```
+Create a summary table for potential papers or simple for those who don't like graphs
