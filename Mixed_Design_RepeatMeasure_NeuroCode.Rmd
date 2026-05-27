@@ -17,8 +17,11 @@ knitr::opts_chunk$set(
 ```
 
 
-**1.Introduction**
-This vignette analyzes repeated measure data across multiple groups. Data primarily focuses on looking at intermusclar inhibition between muscles in different spinal cord injury models. Inhibition is measured via multiple mechanical perturbation (Pull) or electrical stimulation of the muscle belly (Stim) per subject. Note* Data provided is real world data and includes limited sample size, thus non-parametric testing will be used* . 
+# 1.Introduction
+
+Many physiological and behavioral studies use within‑subject repeated‑measures designs, where each participant is tested under multiple conditions. This approach increases statistical power by letting each subject serve as their own control. At the same time, experiments often include between‑group comparisons, creating mixed designs that require careful data organization and analysis.
+
+In this vignette, I use a simplified dataset from my dissertation to illustrate a clear, reproducible workflow for analyzing this type of experiment. The pipeline highlights the reasoning behind each coding step—from data import and reshaping to visualization and statistical testing—showing how to approach a small repeated‑measures dataset in a structured, transparent way.
 
  The goals of this analysis are:
 
@@ -42,7 +45,8 @@ library(ggpubr)
 library(kableExtra)
 ```
 
-**2.Data Import and Structure**
+# 2.Data Import and Structure**
+
 ```{r}
 df_raw <- read_excel("Stim vs Pull Adjusted Organized.xlsx")
 ```
@@ -52,7 +56,7 @@ The data set contains:
   Metadata columns (Lesion, Date, Animal, LesionType, Combination, StimVsPull, Force) and Inhibition results in columns (H → end). First data wrangling move is to pivot from wide format to long for analysis simplicity.
 
 
-**3.Reshape Inhibition Trials into Long Format**
+# 3.Reshape Inhibition Trials into Long Format
 
 ```{r}
 meta_cols <- 1:7
@@ -72,11 +76,12 @@ df_long <- df_raw %>%
   )
 ```
 
-Coding commentary:  
-Here using pivot_longer each inhibition trial becomes one row, enabling grouping, summarizing, and plotting with ggplot2.
+## Coding commentary:  
+The data set orginially has 2 row per subject 1 row containing multiple before data points, and the other after data points. Several R functions prefer "tidy" data where each row only has 1 data point. Using pivot_longer each inhibition trial becomes one row, enabling grouping, summarizing, and plotting with ggplot2.
 
 
-**4. Compute Mean Inhibition Per Subject**
+# 4. Compute Mean Inhibition Per Subject
+
 ```{r}
 df_means <- df_long %>%
   group_by(Animal, LesionType, Condition) %>%
@@ -87,7 +92,8 @@ df_means <- df_long %>%
 ```
 
 
-**5. Wilcoxon Sign Rank Test Within Each Lesion Type**
+# 5. Wilcoxon Sign Rank Test Within Each Lesion Type
+
 ```{r}
 
 df_wide <- df_means %>%
@@ -110,17 +116,19 @@ wilcox_results <- df_wide %>%
   )
 
 ```
-Coding commentary:  
-Wilcoxon Sign Rank test is appropriate because Pull and Stim are repeated measures from the same subjects, but data sets fluctuate in size and may be small.
+## Coding commentary:  
+Wilcoxon Sign Rank test is appropriate because Pull and Stim are repeated measures from the same subjects, but data sets fluctuate in size and may be small. For function inputs please see wilcox_results
 
-**6. Merge p‑Values Back Into Plotting Data**
+# 6. Merge p‑Values Back Into Plotting Data
+
 ```{r}
 df_means <- df_means %>%
   left_join(wilcox_results, by = "LesionType")
 
 ```
 
-**7. Subject‑Connected Boxplots (Mean Inhibition)**
+# 7. Subject‑Connected Boxplots (Mean Inhibition)
+
 ```{r}
 ggplot(df_means, aes(x = Condition, y = MeanInhibition)) +
   geom_boxplot(aes(fill = LesionType), alpha = 0.6, outlier.shape = NA) +
@@ -155,7 +163,7 @@ Coding commentary:
 Subject‑connected lines emphasize within‑subject changes allowing for faster audience digestion. Faceting by lesion type isolates group‑specific patterns allowing people to notice whole study results quickly. Using averages while appropriate simplifies the data sets, looking at data within single subjects may be more ideal in some cases.
 
 
-**8. Ridge‑Line Plot Set (Trial‑Level Distributions)**
+# 8. Ridge‑Line Plot Set (Trial‑Level Distributions)
 ```{r}
 order_table <- df_ridge <- df_long %>%
   mutate(
@@ -186,9 +194,40 @@ df_ridge <- df_long %>%
   )
 
 ```
-^^Set up the data for ease of plotting^^
+## This section of chunk is reorganizing the data to better fit a ridgeline plot and undergoes several steps: This part of the code reorganizes the data so it can be used in a ridgeline plot, where each subject has two stacked curves: one for Stim and one for Pull. To make that work, the data needs a clear and consistent ordering.
 
-**8.2 Ridge Plot Function**
+1. Clean up the Condition labels
+We first standardize the Condition column so every row uses the exact same spelling of “Stim” and “Pull.”
+This prevents problems later if someone typed “STIM” or “stim.”
+This is basic data cleaning using case_when.
+
+2. Create an ordering table
+distinct(Animal, Condition) creates a small table with one row per subject per condition.
+This is where we define the stacking order for the ridgeline plot.
+
+We then assign:
+
+Stim = 1 (should appear on top)
+
+Pull = 2 (should appear below)
+
+This gives us a clean, predictable order for plotting.
+This step is about building a tidy ordering key.
+
+3. Build the SubjectOrder labels
+We combine the subject ID and condition into labels like 12_Stim and 12_Pull.
+These become the y‑axis categories in the ridgeline plot.
+
+4. Join the ordering back into the full dataset
+left_join(order_table) attaches the correct order and label to every trial for that subject.
+This ensures all trial‑level rows know where they belong in the plot.
+
+5. Convert SubjectOrder into an ordered factor
+ggplot2 needs the y‑axis variable to be an ordered factor with levels in the exact order we want.
+Setting the factor levels from order_table$SubjectOrder guarantees that each subject’s Stim curve appears above their Pull curve.
+
+
+# 8.2 Ridge Plot Function
 ```{r}
 ridge_plot <- function(lesion_name) {
   
@@ -220,7 +259,7 @@ ridge_plot <- function(lesion_name) {
 
 I created a plot function to minimize coding repetition for each graph^^
 
-**8.3 Generate the Four Ridge Plots**
+# 8.3 Generate the Four Ridge Plots
 
 ```{r}
 ridge_DQ      <- ridge_plot("DQ")
@@ -238,7 +277,7 @@ ridge_LHX
 Commentary:  
 Ridge‑line plots reveal the shape of inhibition distributions, not just their means, in situations where means may not be the best representation of the data ridgleines may better describe data; binomial distributions are a great example of this. 
 
-**Summary Table**
+# Summary Table
 ```{r}
 
 summary_table <- df_wide %>%
